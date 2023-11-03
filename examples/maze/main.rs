@@ -204,7 +204,10 @@ fn finished(
 
     let best_individual = evolution.evolution.current_best();
 
-    let path = MazeFitness::calculate_path(&best_individual.chromosome, &maze.maze, maze.start);
+    let mut path = MazeFitness::calculate_path(&best_individual.chromosome, &maze.maze, maze.start);
+
+    println!("Path size: {}", path.len());
+    path.pop().unwrap();
 
     for a in path {
         let (i, j) = a;
@@ -228,7 +231,7 @@ fn finished(
 }
 
 fn main() {
-    let mut maze = read_matrix_from_file("examples/maze/lab0.in");
+    let mut maze = read_matrix_from_file("examples/maze/maze4.in");
 
     let mut start = (0, 0);
     let mut end = (0, 0);
@@ -249,11 +252,15 @@ fn main() {
     let max_score = (n + m) as f64;
 
     let crossover = UniformCrossover {
-        crossover_rate: 0.8,
+        crossover_rate: 0.2,
         toss_probability: 0.3,
     };
 
-    let evolution_builder = EvolutionBuilder::new(50, 100, GeneCod::Real, (0.0, 1.0))
+    let mutation = SubstituteMutation {
+        mutation_rate: 0.1,
+    };
+
+    let evolution_builder = EvolutionBuilder::new(50, 2000, GeneCod::Real, (0.0, 1.0))
         .with_fitness(MazeFitness {
             max_dist: max_score,
             start,
@@ -262,9 +269,10 @@ fn main() {
         })
         .with_selection(RouletteSelection::default())
         .with_crossover(crossover)
-        .with_mutation(SubstituteMutation::default())
+        .with_mutation(mutation)
         .with_title("Maze".to_string())
-        .with_stop_condition(move |best_fitness, _, _| best_fitness == max_score - 1.0)
+        .with_stop_condition(move |best_fitness, _, _| best_fitness == max_score)
+        // .with_stop_condition(move |_, iterations, _| iterations >= 10_000)
         .with_coding(MazeCoding);
 
     let evolution = evolution_builder.build().unwrap();
@@ -288,7 +296,7 @@ fn main() {
             Update,
             update
                 .run_if(in_state(EvolutionStates::Running))
-                .run_if(on_timer(Duration::from_millis(100))),
+                // .run_if(on_timer(Duration::from_millis(100))),
         )
         .add_systems(OnEnter(EvolutionStates::Finished), finished)
         .run();
